@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Cysharp.Threading.Tasks;
 using NikkeViewerEX.Components;
 using NikkeViewerEX.Serialization;
@@ -15,7 +16,8 @@ namespace NikkeViewerEX.UI
         #region Public API
         public void SwapVariation(string characterId, int variationIndex = -1)
         {
-            if (!activeViewers.TryGetValue(characterId, out NikkeViewerBase viewer))
+            NikkeViewerBase viewer = activeViewers.Values.FirstOrDefault(v => v.NikkeData.AssetName == characterId);
+            if (viewer == null)
             {
                 Debug.LogWarning($"No active viewer for {characterId}");
                 return;
@@ -96,13 +98,18 @@ namespace NikkeViewerEX.UI
         void RebuildActiveViewers()
         {
             activeViewers.Clear();
+            int maxId = 0;
             var viewers = FindObjectsByType<NikkeViewerBase>(FindObjectsSortMode.None);
             foreach (var viewer in viewers)
             {
-                string id = viewer.NikkeData.AssetName;
-                if (!string.IsNullOrEmpty(id))
-                    activeViewers[id] = viewer;
+                int instanceId = viewer.NikkeData.InstanceId;
+                if (instanceId > 0)
+                {
+                    activeViewers[instanceId] = viewer;
+                    if (instanceId > maxId) maxId = instanceId;
+                }
             }
+            nextInstanceId = maxId + 1;
         }
 
         bool IsCharacterActive(string id) =>
@@ -115,8 +122,6 @@ namespace NikkeViewerEX.UI
             VisualElement itemRoot
         )
         {
-            if (IsCharacterActive(entry.id)) return;
-
             if (!resolvedAssets.TryGetValue(entry.id, out CharacterAssetInfo assetInfo) || !assetInfo.IsValid)
             {
                 Debug.LogError($"No valid assets for {entry.id}");
@@ -153,8 +158,12 @@ namespace NikkeViewerEX.UI
                     });
                 }
 
+                int instanceId = nextInstanceId++;
+                string displayName = entry.name;
+
                 viewer.NikkeData = new Nikke
                 {
+                    InstanceId = instanceId,
                     NikkeName = entry.name,
                     AssetName = entry.id,
                     SkelPath = assetInfo.SkelPath,
@@ -177,20 +186,23 @@ namespace NikkeViewerEX.UI
                     }
                     viewer.TouchVoices = clips;
                 }
-                viewer.name = entry.name;
+                viewer.name = displayName;
                 viewer.TriggerSpawn();
 
-                activeViewers[entry.id] = viewer;
+                activeViewers[instanceId] = viewer;
                 currentVariation[entry.id] = 0;
                 settingsManager.NikkeSettings.NikkeList.Add(viewer.NikkeData);
                 await settingsManager.SaveSettings();
 
-                addBtn.style.display = DisplayStyle.None;
-                addedLabel.style.display = DisplayStyle.Flex;
-                itemRoot.AddToClassList("character-added");
+                int count = 0;
+                foreach (var n in settingsManager.NikkeSettings.NikkeList)
+                    if (n.AssetName == entry.id) count++;
+                addBtn.text = $"Added ({count})";
+                addBtn.SetEnabled(true);
 
+                RefreshActiveList();
+                UpdateBrowserAddedCount(entry.id);
                 UpdateBrowserCount();
-                Debug.Log($"Added character: {entry.name} ({entry.id}), skel: {assetInfo.SkelPath}, {assetInfo.VariationCount} texture variations");
             }
             catch (Exception ex)
             {
@@ -200,25 +212,32 @@ namespace NikkeViewerEX.UI
             }
         }
 
-        async void RemoveCharacter(string assetName)
+        async void RemoveCharacter(int instanceId)
         {
-            if (activeViewers.TryGetValue(assetName, out NikkeViewerBase viewer))
+            string assetNameToUpdate = null;
+            
+            NikkeViewerBase viewerToRemove = null;
+            if (activeViewers.TryGetValue(instanceId, out viewerToRemove))
             {
-                if (viewer != null)
-                {
-                    if (viewer.NikkeNameText != null)
-                        Destroy(viewer.NikkeNameText.gameObject);
-                    Destroy(viewer.gameObject);
-                }
-                activeViewers.Remove(assetName);
+                activeViewers.Remove(instanceId);
+                if (viewerToRemove != null)
+                    assetNameToUpdate = viewerToRemove.NikkeData.AssetName;
+            }
+            
+            if (viewerToRemove != null)
+            {
+                if (viewerToRemove.NikkeNameText != null)
+                    Destroy(viewerToRemove.NikkeNameText.gameObject);
+                Destroy(viewerToRemove.gameObject);
             }
             else
             {
                 var allViewers = FindObjectsByType<NikkeViewerBase>(FindObjectsSortMode.None);
                 foreach (var v in allViewers)
                 {
-                    if (v.NikkeData.AssetName == assetName)
+                    if (v.NikkeData.InstanceId == instanceId)
                     {
+                        assetNameToUpdate = v.NikkeData.AssetName;
                         if (v.NikkeNameText != null)
                             Destroy(v.NikkeNameText.gameObject);
                         Destroy(v.gameObject);
@@ -227,29 +246,14 @@ namespace NikkeViewerEX.UI
                 }
             }
 
-            currentVariation.Remove(assetName);
-            settingsManager.NikkeSettings.NikkeList.RemoveAll(n => n.AssetName == assetName);
-            await settingsManager.SaveSettings();
-
-            foreach (var (element, entry) in browserItems)
-            {
-                if (entry.id == assetName)
-                {
-                    VisualElement itemRoot = element.Q("character-item");
-                    Button addBtn = element.Q<Button>("add-button");
-                    Label addedLabel = element.Q<Label>("added-label");
-
-                    addBtn.style.display = DisplayStyle.Flex;
-                    addBtn.SetEnabled(true);
-                    addBtn.text = "Add";
-                    addedLabel.style.display = DisplayStyle.None;
-                    itemRoot.RemoveFromClassList("character-added");
-                    break;
-                }
-            }
-
+            settingsManager.NikkeSettings.NikkeList.RemoveAll(n => n.InstanceId == instanceId);
+            
+            RefreshActiveList();
+            if (assetNameToUpdate != null)
+                UpdateBrowserAddedCount(assetNameToUpdate);
             UpdateBrowserCount();
-            Debug.Log($"Removed character: {assetName}");
+            
+            await settingsManager.SaveSettings();
         }
         #endregion
     }

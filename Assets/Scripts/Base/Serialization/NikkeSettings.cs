@@ -26,6 +26,13 @@ namespace NikkeViewerEX.Serialization
     {
         public string Name;
         public List<Nikke> NikkeList = new();
+        public string BackgroundImage;
+        public float BackgroundScale = 1f;
+        public float BackgroundPanX;
+        public float BackgroundPanY;
+        public string BackgroundMusic;
+        public float BackgroundMusicVolume = 0.5f;
+        public bool BackgroundMusicPlaying = true;
     }
 
     [Serializable]
@@ -46,6 +53,7 @@ namespace NikkeViewerEX.Serialization
         public string AssetsFolder;
         public string ThumbnailsFolder;
         public string BackgroundsFolder;
+        public string BgmFolder;
         public List<Nikke> NikkeList = new();
         public List<NikkePreset> Presets = new();
     }
@@ -53,6 +61,7 @@ namespace NikkeViewerEX.Serialization
     [Serializable]
     public class Nikke
     {
+        public int InstanceId;
         public string NikkeName;
         public string AssetName;
         public string SkelPath;

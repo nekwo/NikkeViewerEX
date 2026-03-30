@@ -14,8 +14,9 @@ namespace NikkeViewerEX.UI
 
         // Data
         NikkeDatabaseEntry[] database;
-        readonly Dictionary<string, NikkeViewerBase> activeViewers = new();
+        readonly Dictionary<int, NikkeViewerBase> activeViewers = new();
         readonly Dictionary<string, CharacterAssetInfo> resolvedAssets = new();
         readonly Dictionary<string, int> currentVariation = new();
+        static int nextInstanceId = 1;
     }
 }

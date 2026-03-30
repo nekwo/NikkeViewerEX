@@ -72,7 +72,7 @@ namespace NikkeViewerEX.Core
         /// List of supported audio files.
         /// </summary>
         /// <value></value>
-        public string[] SupportedAudioFiles = { ".mp3", ".ogg", ".wav" };
+        public string[] SupportedAudioFiles = { ".mp3", ".ogg", ".wav", ".flac" };
 
         /// <summary>
         /// Settings data.
@@ -435,7 +435,7 @@ namespace NikkeViewerEX.Core
         {
             FileBrowser.SetFilters(
                 false,
-                new FileBrowser.Filter("Assets", ".png", ".jpg", ".mp3", ".ogg", ".wav")
+                new FileBrowser.Filter("Assets", ".png", ".jpg", ".mp3", ".ogg", ".wav", ".flac")
             );
             string[] paths = await StorageHelper.OpenFileDialog(
                 inputField,

@@ -13,6 +13,7 @@ namespace NikkeViewerEX.UI
         TextField assetsFolderInput;
         TextField thumbnailsFolderInput;
         TextField backgroundsFolderInput;
+        TextField bgmPathInput;
         Button loadButton;
         Label statusText;
 
@@ -22,6 +23,7 @@ namespace NikkeViewerEX.UI
             assetsFolderInput = root.Q<TextField>("assets-folder-input");
             thumbnailsFolderInput = root.Q<TextField>("thumbnails-folder-input");
             backgroundsFolderInput = root.Q<TextField>("backgrounds-folder-input");
+            bgmPathInput = root.Q<TextField>("bgm-path-input");
             loadButton = root.Q<Button>("load-button");
             statusText = root.Q<Label>("status-text");
         }
@@ -32,6 +34,7 @@ namespace NikkeViewerEX.UI
             root.Q<Button>("browse-assets").clicked += BrowseAssetsFolder;
             root.Q<Button>("browse-thumbnails").clicked += BrowseThumbnailsFolder;
             root.Q<Button>("browse-backgrounds").clicked += BrowseBackgroundsFolder;
+            root.Q<Button>("browse-bgm").clicked += () => BrowseBgmFile().Forget();
             loadButton.clicked += () => LoadDatabase().Forget();
         }
 
@@ -49,6 +52,8 @@ namespace NikkeViewerEX.UI
                 thumbnailsFolderInput.value = thumbnailsFolder;
             if (!string.IsNullOrEmpty(settingsManager.NikkeSettings.BackgroundsFolder))
                 backgroundsFolderInput.value = settingsManager.NikkeSettings.BackgroundsFolder;
+            if (!string.IsNullOrEmpty(settingsManager.NikkeSettings.BgmFolder))
+                bgmPathInput.value = settingsManager.NikkeSettings.BgmFolder;
 
             bool hideUI = settingsManager.NikkeSettings.HideUI;
             isHoverModeEnabled = hideUI;
@@ -99,6 +104,17 @@ namespace NikkeViewerEX.UI
             }
         }
 
+        async UniTaskVoid BrowseBgmFile()
+        {
+            string path = await OpenFolderBrowser("Select BGM Folder");
+            if (!string.IsNullOrEmpty(path))
+            {
+                bgmPathInput.value = path;
+                settingsManager.NikkeSettings.BgmFolder = path;
+                await settingsManager.SaveSettings();
+            }
+        }
+
         async UniTask LoadDatabase()
         {
             string jsonPath = jsonPathInput.value;
@@ -129,6 +145,7 @@ namespace NikkeViewerEX.UI
             settingsManager.NikkeSettings.AssetsFolder = assetsFolder;
             settingsManager.NikkeSettings.ThumbnailsFolder = thumbnailsFolderInput.value;
             settingsManager.NikkeSettings.BackgroundsFolder = backgroundsFolderInput.value;
+            settingsManager.NikkeSettings.BgmFolder = bgmPathInput.value;
             await settingsManager.SaveSettings();
 
             try

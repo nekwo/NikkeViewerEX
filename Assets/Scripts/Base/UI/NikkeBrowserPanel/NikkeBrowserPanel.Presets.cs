@@ -32,14 +32,26 @@ namespace NikkeViewerEX.UI
             string name = presetNameInput.value?.Trim();
             if (string.IsNullOrEmpty(name)) return;
 
-            var nikkeList = settingsManager.NikkeSettings.NikkeList;
-            if (nikkeList.Count == 0) return;
+            var settings = settingsManager.NikkeSettings;
 
             var snapshot = new List<Nikke>();
-            foreach (var nikke in nikkeList)
+            foreach (var nikke in settings.NikkeList)
                 snapshot.Add(JsonUtility.FromJson<Nikke>(JsonUtility.ToJson(nikke)));
 
-            settingsManager.NikkeSettings.Presets.Add(new NikkePreset { Name = name, NikkeList = snapshot });
+            var preset = new NikkePreset
+            {
+                Name = name,
+                NikkeList = snapshot,
+                BackgroundImage = settings.BackgroundImage,
+                BackgroundScale = settings.BackgroundScale,
+                BackgroundPanX = settings.BackgroundPanX,
+                BackgroundPanY = settings.BackgroundPanY,
+                BackgroundMusic = settings.BackgroundMusic,
+                BackgroundMusicVolume = settings.BackgroundMusicVolume,
+                BackgroundMusicPlaying = settings.BackgroundMusicPlaying,
+            };
+
+            settings.Presets.Add(preset);
             settingsManager.SaveSettings().Forget();
 
             presetNameInput.value = "";
@@ -73,7 +85,12 @@ namespace NikkeViewerEX.UI
                 nameLabel.AddToClassList("preset-name");
 
                 int count = preset.NikkeList.Count;
-                var countLabel = new Label($"{count} character{(count != 1 ? "s" : "")}");
+                string details = $"{count} character{(count != 1 ? "s" : "")}";
+                if (!string.IsNullOrEmpty(preset.BackgroundImage))
+                    details += " | BG";
+                if (!string.IsNullOrEmpty(preset.BackgroundMusic))
+                    details += " | Music";
+                var countLabel = new Label(details);
                 countLabel.AddToClassList("preset-count");
 
                 info.Add(nameLabel);
@@ -122,6 +139,41 @@ namespace NikkeViewerEX.UI
 
             await UniTask.NextFrame();
 
+            // Restore background
+            var settings = settingsManager.NikkeSettings;
+            settings.BackgroundImage = preset.BackgroundImage;
+            settings.BackgroundScale = preset.BackgroundScale;
+            settings.BackgroundPanX = preset.BackgroundPanX;
+            settings.BackgroundPanY = preset.BackgroundPanY;
+            settingsManager.BackgroundImageInput.text = preset.BackgroundImage ?? "";
+            settingsManager.ApplySettings();
+
+            // Restore music
+            settings.BackgroundMusic = preset.BackgroundMusic;
+            settings.BackgroundMusicVolume = preset.BackgroundMusicVolume;
+            settings.BackgroundMusicPlaying = preset.BackgroundMusicPlaying;
+            settingsManager.BackgroundMusicAudio.volume = preset.BackgroundMusicVolume;
+            settingsManager.BackgroundMusicInput.text = preset.BackgroundMusic ?? "";
+
+            if (!string.IsNullOrEmpty(preset.BackgroundMusic))
+            {
+                var clip = await WebRequestHelper.GetAudioClip(preset.BackgroundMusic);
+                if (clip != null)
+                {
+                    settingsManager.BackgroundMusicAudio.clip = clip;
+                    if (preset.BackgroundMusicPlaying)
+                        settingsManager.BackgroundMusicAudio.Play();
+                    else
+                        settingsManager.BackgroundMusicAudio.Pause();
+                }
+            }
+            else
+            {
+                settingsManager.BackgroundMusicAudio.Stop();
+                settingsManager.BackgroundMusicAudio.clip = null;
+            }
+
+            // Restore characters
             var newList = new List<Nikke>();
 
             foreach (var savedNikke in preset.NikkeList)
@@ -151,7 +203,7 @@ namespace NikkeViewerEX.UI
                     }
 
                     viewer.TriggerSpawn();
-                    activeViewers[nikkeData.AssetName] = viewer;
+                    activeViewers[nikkeData.InstanceId] = viewer;
                     newList.Add(nikkeData);
                 }
                 catch (Exception ex)
@@ -160,7 +212,7 @@ namespace NikkeViewerEX.UI
                 }
             }
 
-            settingsManager.NikkeSettings.NikkeList = newList;
+            settings.NikkeList = newList;
             await settingsManager.SaveSettings();
 
             UpdateBrowserCount();

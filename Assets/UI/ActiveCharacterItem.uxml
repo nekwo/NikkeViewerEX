@@ -14,13 +14,20 @@
             <Button class="remove-button" name="remove-button" text="Remove" />
         </VisualElement>
 
-        <!-- Controls row: scale slider + hide name toggle -->
+        <!-- Controls row: scale slider + hide name toggle + lock toggle -->
         <VisualElement class="active-item-controls">
             <Label class="active-control-label" text="Scale" />
             <Slider class="active-scale-slider" name="active-scale-slider"
                 low-value="0.2" high-value="5" value="1" />
             <Label class="active-scale-value" name="active-scale-value" text="1.0x" />
-            <Toggle class="active-hide-name-toggle" name="active-hide-name-toggle" label="Show name" />
+            <VisualElement class="active-hide-name-toggle" name="active-hide-name-toggle">
+                <Label class="toggle-label" text="Show name" />
+                <Toggle class="toggle-checkbox" name="toggle-checkbox" />
+            </VisualElement>
+            <VisualElement class="active-lock-toggle" name="active-lock-toggle">
+                <Label class="toggle-label" text="Lock" />
+                <Toggle class="toggle-checkbox" name="lock-checkbox" />
+            </VisualElement>
         </VisualElement>
 
     </VisualElement>

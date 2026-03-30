@@ -243,7 +243,7 @@
     border-width: 1px;
     border-color: var(--border-subtle);
     border-radius: var(--radius-md);
-    color: var(--text-primary);
+    color: rgb(0, 24, 67);
     font-size: 13px;
 }
 
@@ -329,7 +329,7 @@
     border-width: 1px;
     border-color: var(--border-subtle);
     border-radius: var(--radius-md);
-    color: var(--text-primary);
+    color: rgb(0, 24, 67);
     font-size: 13px;
 }
 
@@ -339,6 +339,51 @@
 
 .search-input .unity-text-element--placeholder {
     color: var(--text-dim);
+}
+
+/* ============================================
+   Filter Bar
+   ============================================ */
+
+.filter-bar {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.filter-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-right: var(--spacing-sm);
+    flex-shrink: 0;
+}
+
+.filter-button {
+    height: 26px;
+    padding: 0 var(--spacing-md);
+    margin-right: var(--spacing-xs);
+    background-color: var(--bg-input);
+    border-width: 1px;
+    border-color: var(--border-subtle);
+    border-radius: 13px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    -unity-font-style: bold;
+    cursor: link;
+    transition-property: background-color, border-color, color;
+    transition-duration: 0.12s;
+}
+
+.filter-button:hover {
+    background-color: var(--bg-surface-hover);
+    border-color: var(--color-primary);
+    color: var(--text-primary);
+}
+
+.filter-button.filter-active {
+    background-color: rgba(88, 140, 236, 0.2);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
 }
 
 .list-header {
@@ -526,6 +571,7 @@
 
 .character-card .character-name {
     font-size: 12px;
+    color: rgb(220, 220, 232);
     white-space: nowrap;
     overflow: hidden;
 }
@@ -555,6 +601,7 @@
     width: auto;
     height: 26px;
     font-size: 11px;
+    display: none;
 }
 
 /* ============================================
@@ -630,13 +677,18 @@
     align-items: center;
 }
 
-.active-hide-name-toggle .unity-label {
+.active-hide-name-toggle .toggle-label {
     font-size: 11px;
     color: var(--text-secondary);
-    margin-left: var(--spacing-xs);
+    padding-top: 2px;
 }
 
-.active-hide-name-toggle .unity-toggle__checkmark {
+.active-hide-name-toggle .toggle-checkbox {
+    flex-direction: row;
+    margin-left: 4px;
+}
+
+.active-hide-name-toggle .toggle-checkbox .unity-toggle__checkmark {
     background-color: var(--bg-input);
     border-color: var(--border-subtle);
     border-width: 1px;
@@ -645,7 +697,39 @@
     height: 14px;
 }
 
-.active-hide-name-toggle:checked .unity-toggle__checkmark {
+.active-hide-name-toggle .toggle-checkbox:checked .unity-toggle__checkmark {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.active-lock-toggle {
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    margin-left: 12px;
+}
+
+.active-lock-toggle .toggle-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    padding-top: 2px;
+}
+
+.active-lock-toggle .toggle-checkbox {
+    flex-direction: row;
+    margin-left: 4px;
+}
+
+.active-lock-toggle .toggle-checkbox .unity-toggle__checkmark {
+    background-color: var(--bg-input);
+    border-color: var(--border-subtle);
+    border-width: 1px;
+    border-radius: var(--radius-sm);
+    width: 14px;
+    height: 14px;
+}
+
+.active-lock-toggle .toggle-checkbox:checked .unity-toggle__checkmark {
     background-color: var(--color-primary);
     border-color: var(--color-primary);
 }
@@ -989,6 +1073,153 @@
     -unity-font-style: bold;
     min-width: 44px;
     -unity-text-align: middle-right;
+}
+
+/* ============================================
+   Active Tab - Music Controls
+   ============================================ */
+
+.active-music-section {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--bg-surface-light);
+    border-radius: var(--radius-md);
+    border-width: 1px;
+    border-color: var(--border-subtle);
+}
+
+.active-music-icon {
+    font-size: 18px;
+    color: var(--color-primary);
+    margin-right: var(--spacing-sm);
+    flex-shrink: 0;
+}
+
+.active-music-name {
+    flex-grow: 1;
+    font-size: 12px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    margin-right: var(--spacing-sm);
+}
+
+.active-music-playpause {
+    height: 26px;
+    padding: 0 var(--spacing-md);
+    margin-right: var(--spacing-sm);
+    background-color: var(--color-primary);
+    border-width: 0;
+    border-radius: var(--radius-sm);
+    color: white;
+    font-size: 11px;
+    -unity-font-style: bold;
+    cursor: link;
+    flex-shrink: 0;
+}
+
+.active-music-playpause:hover {
+    background-color: var(--color-primary-hover);
+}
+
+.active-music-playpause:disabled {
+    background-color: var(--bg-surface-light);
+    color: var(--text-dim);
+    opacity: 0.6;
+}
+
+.active-music-volume {
+    width: 100px;
+    flex-shrink: 0;
+    margin-right: var(--spacing-xs);
+}
+
+.active-music-volume .unity-base-slider__dragger {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.active-music-volume .unity-base-slider__tracker {
+    background-color: var(--border-color);
+    border-width: 0;
+}
+
+.active-music-volume-value {
+    font-size: 11px;
+    color: var(--text-secondary);
+    min-width: 32px;
+    -unity-text-align: middle-right;
+    flex-shrink: 0;
+}
+
+/* ============================================
+   Music Tab
+   ============================================ */
+
+.music-item {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    margin-bottom: var(--spacing-xs);
+    background-color: var(--bg-surface-light);
+    border-radius: var(--radius-md);
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0);
+    cursor: link;
+    transition-property: background-color, border-color;
+    transition-duration: 0.12s;
+}
+
+.music-item:hover {
+    background-color: var(--bg-surface-hover);
+    border-color: var(--border-subtle);
+}
+
+.music-item.music-active {
+    border-color: var(--color-primary);
+    background-color: rgba(88, 140, 236, 0.1);
+}
+
+.music-icon {
+    font-size: 18px;
+    color: var(--text-dim);
+    margin-right: var(--spacing-md);
+    flex-shrink: 0;
+}
+
+.music-item.music-active .music-icon {
+    color: var(--color-primary);
+}
+
+.music-info {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: center;
+}
+
+.music-name {
+    font-size: 13px;
+    color: var(--text-primary);
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.music-item.music-active .music-name {
+    color: var(--color-primary);
+    -unity-font-style: bold;
+}
+
+.music-ext {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-left: var(--spacing-sm);
+    padding: 1px 6px;
+    background-color: var(--bg-input);
+    border-radius: 4px;
+    flex-shrink: 0;
 }
 
 /* ============================================

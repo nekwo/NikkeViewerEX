@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Cysharp.Threading.Tasks;
 using NikkeViewerEX.Serialization;
@@ -24,6 +25,12 @@ namespace NikkeViewerEX.UI
         Slider activeBgPanY;
         Label activeBgPanYValue;
 
+        // Music controls in active tab
+        Label activeMusicName;
+        Button activeMusicPlayPause;
+        Slider activeMusicVolume;
+        Label activeMusicVolumeValue;
+
         void QueryActiveElements()
         {
             activeCount = root.Q<Label>("active-count");
@@ -38,10 +45,25 @@ namespace NikkeViewerEX.UI
             activeBgPanXValue = root.Q<Label>("active-bg-panx-value");
             activeBgPanY = root.Q<Slider>("active-bg-pan-y");
             activeBgPanYValue = root.Q<Label>("active-bg-pany-value");
+
+            activeMusicName = root.Q<Label>("active-music-name");
+            activeMusicPlayPause = root.Q<Button>("active-music-playpause");
+            activeMusicVolume = root.Q<Slider>("active-music-volume");
+            activeMusicVolumeValue = root.Q<Label>("active-music-volume-value");
         }
 
         void BindActiveEvents()
         {
+            activeMusicPlayPause.clicked += ToggleMusicPlayPause;
+            activeMusicVolume.RegisterValueChangedCallback(evt =>
+            {
+                float vol = evt.newValue;
+                activeMusicVolumeValue.text = $"{Mathf.RoundToInt(vol * 100)}%";
+                settingsManager.BackgroundMusicAudio.volume = vol;
+                settingsManager.NikkeSettings.BackgroundMusicVolume = vol;
+                settingsManager.SaveSettings().Forget();
+            });
+
             activeBgSlider.RegisterValueChangedCallback(evt =>
             {
                 float val = evt.newValue;
@@ -76,6 +98,7 @@ namespace NikkeViewerEX.UI
         {
             RebuildActiveViewers();
             RefreshBackgroundPreview();
+            RefreshActiveMusicInfo();
 
             activeList.Clear();
             var nikkeList = settingsManager.NikkeSettings.NikkeList;
@@ -96,9 +119,14 @@ namespace NikkeViewerEX.UI
             {
                 VisualElement item = m_ActiveItemTemplate.Instantiate();
 
+                int instanceCount = 0;
+                foreach (var n in nikkeList)
+                    if (n.AssetName == nikke.AssetName) instanceCount++;
                 string displayName = string.IsNullOrEmpty(nikke.NikkeName)
                     ? nikke.AssetName
                     : nikke.NikkeName;
+                if (instanceCount > 1)
+                    displayName += $" #{nikke.InstanceId}";
                 item.Q<Label>("character-name").text = displayName;
                 item.Q<Label>("character-id").text = nikke.AssetName;
 
@@ -126,10 +154,10 @@ namespace NikkeViewerEX.UI
                             poseBtn.AddToClassList("pose-active");
 
                         NikkePoseType poseType = pose.PoseType;
-                        string id = nikke.AssetName;
+                        int capturedInstanceId = nikke.InstanceId;
                         poseBtn.clicked += () =>
                         {
-                            if (activeViewers.TryGetValue(id, out var viewer))
+                            if (activeViewers.TryGetValue(capturedInstanceId, out var viewer))
                             {
                                 viewer.SetActivePose(poseType);
                                 RefreshActiveList();
@@ -143,7 +171,7 @@ namespace NikkeViewerEX.UI
                     poseContainer.style.display = DisplayStyle.None;
                 }
 
-                string assetName = nikke.AssetName;
+                int instanceId = nikke.InstanceId;
 
                 // Scale slider
                 var scaleSlider = item.Q<Slider>("active-scale-slider");
@@ -155,7 +183,7 @@ namespace NikkeViewerEX.UI
                 {
                     float val = evt.newValue;
                     scaleValueLabel.text = $"{val:F1}x";
-                    if (activeViewers.TryGetValue(assetName, out var viewer))
+                    if (activeViewers.TryGetValue(instanceId, out var viewer))
                     {
                         Vector3 newScale = Vector3.one * val;
                         viewer.transform.localScale = newScale;
@@ -165,11 +193,11 @@ namespace NikkeViewerEX.UI
                 });
 
                 // Show name toggle (inverted: checked = visible, unchecked = hidden)
-                var hideNameToggle = item.Q<Toggle>("active-hide-name-toggle");
+                var hideNameToggle = item.Q<Toggle>("toggle-checkbox");
                 hideNameToggle.SetValueWithoutNotify(!nikke.HideName);
                 hideNameToggle.RegisterValueChangedCallback(evt =>
                 {
-                    if (activeViewers.TryGetValue(assetName, out var viewer))
+                    if (activeViewers.TryGetValue(instanceId, out var viewer))
                     {
                         viewer.NikkeData.HideName = !evt.newValue;
                         viewer.EnsureNameText();
@@ -178,16 +206,60 @@ namespace NikkeViewerEX.UI
                     }
                 });
 
+                // Lock toggle
+                var lockToggle = item.Q<Toggle>("lock-checkbox");
+                lockToggle.SetValueWithoutNotify(nikke.Lock);
+                lockToggle.RegisterValueChangedCallback(evt =>
+                {
+                    if (activeViewers.TryGetValue(instanceId, out var viewer))
+                    {
+                        viewer.NikkeData.Lock = evt.newValue;
+                        settingsManager.SaveSettings().Forget();
+                    }
+                });
+
                 item.Q<Button>("remove-button").clicked += () =>
                 {
-                    RemoveCharacter(assetName);
-                    RefreshActiveList();
+                    RemoveCharacter(instanceId);
                 };
 
                 activeList.Add(item);
             }
 
             tabActiveBtn.text = $"Active ({nikkeList.Count})";
+        }
+
+        void RefreshActiveMusicInfo()
+        {
+            string musicPath = settingsManager.NikkeSettings.BackgroundMusic;
+            bool hasMusic = !string.IsNullOrEmpty(musicPath);
+
+            activeMusicName.text = hasMusic
+                ? System.IO.Path.GetFileNameWithoutExtension(musicPath)
+                : "No track selected";
+
+            bool isPlaying = settingsManager.NikkeSettings.BackgroundMusicPlaying;
+            activeMusicPlayPause.text = isPlaying ? "Pause" : "Play";
+            activeMusicPlayPause.SetEnabled(hasMusic);
+
+            float vol = settingsManager.NikkeSettings.BackgroundMusicVolume;
+            activeMusicVolume.SetValueWithoutNotify(vol);
+            activeMusicVolumeValue.text = $"{Mathf.RoundToInt(vol * 100)}%";
+        }
+
+        void ToggleMusicPlayPause()
+        {
+            bool playing = settingsManager.NikkeSettings.BackgroundMusicPlaying;
+            bool newState = !playing;
+            settingsManager.NikkeSettings.BackgroundMusicPlaying = newState;
+
+            if (newState)
+                settingsManager.BackgroundMusicAudio.UnPause();
+            else
+                settingsManager.BackgroundMusicAudio.Pause();
+
+            activeMusicPlayPause.text = newState ? "Pause" : "Play";
+            settingsManager.SaveSettings().Forget();
         }
 
         void RefreshBackgroundPreview()

@@ -16,7 +16,7 @@
         <!-- Actions -->
         <VisualElement class="character-action-col">
             <Button class="add-button" name="add-button" text="Add" />
-            <Label class="added-label" name="added-label" text="✓ Added" />
+            <Label class="added-label" name="added-label" text="" />
         </VisualElement>
     </VisualElement>
 </UXML>

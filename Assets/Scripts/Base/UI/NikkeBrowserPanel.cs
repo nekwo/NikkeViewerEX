@@ -39,6 +39,7 @@ namespace NikkeViewerEX.UI
         Button tabDebugBtn;
         Button tabPresetsBtn;
         Button tabBackgroundsBtn;
+        Button tabMusicBtn;
 
         // Tab content panels
         VisualElement contentConfig;
@@ -47,6 +48,7 @@ namespace NikkeViewerEX.UI
         VisualElement contentDebug;
         VisualElement contentBackgrounds;
         VisualElement contentPresets;
+        VisualElement contentMusic;
 
         #region Lifecycle
         void Awake()
@@ -63,6 +65,9 @@ namespace NikkeViewerEX.UI
             BindEvents();
             RestoreConfig();
             RebuildActiveViewers();
+            filterHasAssetsBtn.EnableInClassList("filter-active", true);
+            filterFullBtn.EnableInClassList("filter-active", true);
+            ApplyBrowserFilters();
         }
 
         void OnDisable()
@@ -90,6 +95,7 @@ namespace NikkeViewerEX.UI
             tabDebugBtn = root.Q<Button>("tab-debug");
             tabPresetsBtn = root.Q<Button>("tab-presets");
             tabBackgroundsBtn = root.Q<Button>("tab-backgrounds");
+            tabMusicBtn = root.Q<Button>("tab-music");
 
             contentConfig = root.Q("content-config");
             contentBrowser = root.Q("content-browser");
@@ -97,6 +103,7 @@ namespace NikkeViewerEX.UI
             contentDebug = root.Q("content-debug");
             contentBackgrounds = root.Q("content-backgrounds");
             contentPresets = root.Q("content-presets");
+            contentMusic = root.Q("content-music");
 
             QueryConfigElements();
             QueryBrowserElements();
@@ -104,6 +111,7 @@ namespace NikkeViewerEX.UI
             QueryDebugElements();
             QueryBackgroundElements();
             QueryPresetElements();
+            QueryMusicElements();
         }
         #endregion
 
@@ -128,12 +136,14 @@ namespace NikkeViewerEX.UI
             tabDebugBtn.clicked += () => SwitchTab(3);
             tabPresetsBtn.clicked += () => SwitchTab(4);
             tabBackgroundsBtn.clicked += () => SwitchTab(5);
+            tabMusicBtn.clicked += () => SwitchTab(6);
 
             BindConfigEvents();
             BindBrowserEvents();
             BindActiveEvents();
             BindBackgroundEvents();
             BindPresetEvents();
+            BindMusicEvents();
         }
 
         void UnbindEvents()
@@ -227,6 +237,7 @@ namespace NikkeViewerEX.UI
             tabDebugBtn.RemoveFromClassList("tab-active");
             tabPresetsBtn.RemoveFromClassList("tab-active");
             tabBackgroundsBtn.RemoveFromClassList("tab-active");
+            tabMusicBtn.RemoveFromClassList("tab-active");
 
             contentConfig.RemoveFromClassList("tab-visible");
             contentBrowser.RemoveFromClassList("tab-visible");
@@ -234,6 +245,7 @@ namespace NikkeViewerEX.UI
             contentDebug.RemoveFromClassList("tab-visible");
             contentBackgrounds.RemoveFromClassList("tab-visible");
             contentPresets.RemoveFromClassList("tab-visible");
+            contentMusic.RemoveFromClassList("tab-visible");
 
             switch (index)
             {
@@ -244,6 +256,7 @@ namespace NikkeViewerEX.UI
                 case 1:
                     tabBrowserBtn.AddToClassList("tab-active");
                     contentBrowser.AddToClassList("tab-visible");
+                    ApplyBrowserFilters();
                     break;
                 case 2:
                     tabActiveBtn.AddToClassList("tab-active");
@@ -264,6 +277,11 @@ namespace NikkeViewerEX.UI
                     tabBackgroundsBtn.AddToClassList("tab-active");
                     contentBackgrounds.AddToClassList("tab-visible");
                     RefreshBackgroundList();
+                    break;
+                case 6:
+                    tabMusicBtn.AddToClassList("tab-active");
+                    contentMusic.AddToClassList("tab-visible");
+                    RefreshMusicList();
                     break;
             }
         }

@@ -36,10 +36,6 @@ namespace NikkeViewerEX.Components
         Vector2 dragObjectVelocity;
         Vector3 dragObjectOffset;
 
-        readonly float _scrollSensitivity = 0.05f;
-        readonly float _nikkeMinScale = 0.2f;
-        readonly float _nikkeMaxScale = 5f;
-
         /// <summary>
         /// Does Nikke currently being dragged?
         /// </summary>
@@ -98,7 +94,6 @@ namespace NikkeViewerEX.Components
 
         public virtual void Update()
         {
-            ChangeNikkeScale();
         }
 
 
@@ -231,38 +226,6 @@ namespace NikkeViewerEX.Components
             }
         }
         #endregion
-
-        private void ChangeNikkeScale()
-        {
-            if (!NikkeData.Lock)
-            {
-                Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
-                if (Physics.Raycast(ray, out RaycastHit hit))
-                {
-                    var viewer = hit.collider.GetComponentInParent<NikkeViewerBase>();
-                    if (viewer != null)
-                    {
-                        float scrollDelta = Mouse.current.scroll.ReadValue().y;
-                        if (scrollDelta != 0 && !viewer.NikkeData.Lock)
-                        {
-                            Vector3 newScale = spineHelper.ClampVector3(
-                                viewer.transform.localScale
-                                    + _scrollSensitivity * scrollDelta * Vector3.one,
-                                _nikkeMinScale,
-                                _nikkeMaxScale
-                            );
-                            viewer.transform.localScale = Vector3.Lerp(
-                                viewer.transform.localScale,
-                                newScale,
-                                0.5f
-                            );
-                            NikkeData.Scale = newScale;
-                            SettingsManager.SaveSettings().Forget();
-                        }
-                    }
-                }
-            }
-        }
 
         public void AdjustNikkeScale(float scale)
         {

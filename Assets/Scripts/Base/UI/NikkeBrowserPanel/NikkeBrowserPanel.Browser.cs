@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Cysharp.Threading.Tasks;
 using NikkeViewerEX.Serialization;
 using UnityEngine;
@@ -15,6 +16,11 @@ namespace NikkeViewerEX.UI
         Label browserCount;
         ScrollView browserList;
         VisualElement browserEmpty;
+        Button filterHasAssetsBtn;
+        Button filterFullBtn;
+
+        bool filterHasAssets = true;
+        bool filterFull = true;
 
         readonly List<(VisualElement element, NikkeDatabaseEntry entry)> browserItems = new();
 
@@ -24,16 +30,41 @@ namespace NikkeViewerEX.UI
             browserCount = root.Q<Label>("browser-count");
             browserList = root.Q<ScrollView>("browser-list");
             browserEmpty = root.Q("browser-empty");
+            filterHasAssetsBtn = root.Q<Button>("filter-has-assets");
+            filterFullBtn = root.Q<Button>("filter-full");
         }
 
         void BindBrowserEvents()
         {
-            searchInput.RegisterValueChangedCallback(evt => FilterBrowserList(evt.newValue));
+            searchInput.RegisterValueChangedCallback(evt => ApplyBrowserFilters());
+            filterHasAssetsBtn.clicked += ToggleFilterHasAssets;
+            filterFullBtn.clicked += ToggleFilterFull;
         }
 
         void UnbindBrowserEvents()
         {
-            searchInput.UnregisterValueChangedCallback(evt => FilterBrowserList(evt.newValue));
+            searchInput.UnregisterValueChangedCallback(evt => ApplyBrowserFilters());
+            filterHasAssetsBtn.clicked -= ToggleFilterHasAssets;
+            filterFullBtn.clicked -= ToggleFilterFull;
+        }
+
+        void ToggleFilterHasAssets()
+        {
+            filterHasAssets = !filterHasAssets;
+            filterHasAssetsBtn.EnableInClassList("filter-active", filterHasAssets);
+            ApplyBrowserFilters();
+        }
+
+        void ToggleFilterFull()
+        {
+            filterFull = !filterFull;
+            filterFullBtn.EnableInClassList("filter-active", filterFull);
+            ApplyBrowserFilters();
+        }
+
+        void ApplyBrowserFilters()
+        {
+            FilterBrowserList(searchInput.value);
         }
 
         void PopulateBrowserList()
@@ -78,11 +109,14 @@ namespace NikkeViewerEX.UI
                 noAssetsLabel.text = hasAssets ? "" : "missing assets";
                 addBtn.SetEnabled(hasAssets);
 
-                bool isActive = IsCharacterActive(entry.id);
-                addBtn.style.display = isActive ? DisplayStyle.None : DisplayStyle.Flex;
-                addedLabel.style.display = isActive ? DisplayStyle.Flex : DisplayStyle.None;
-                if (isActive)
-                    itemRoot.AddToClassList("character-added");
+                int instanceCount = 0;
+                foreach (var n in settingsManager.NikkeSettings.NikkeList)
+                    if (n.AssetName == entry.id) instanceCount++;
+                if (instanceCount > 0)
+                {
+                    addBtn.text = $"Added ({instanceCount})";
+                    addedLabel.style.display = DisplayStyle.None;
+                }
 
                 addBtn.clicked += () => AddCharacter(entry, addBtn, addedLabel, itemRoot);
 
@@ -137,13 +171,23 @@ namespace NikkeViewerEX.UI
                     || entry.name.ToLowerInvariant().Contains(filter)
                     || entry.id.ToLowerInvariant().Contains(filter);
 
+                if (match && (filterHasAssets || filterFull))
+                {
+                    var assetInfo = resolvedAssets.GetValueOrDefault(entry.id);
+                    if (filterHasAssets && assetInfo is not { IsValid: true })
+                        match = false;
+                    if (filterFull && (assetInfo == null || assetInfo.Poses.Count <= 1))
+                        match = false;
+                }
+
                 element.style.display = match ? DisplayStyle.Flex : DisplayStyle.None;
                 if (match) visible++;
             }
 
-            browserCount.text = string.IsNullOrEmpty(filter)
-                ? $"{browserItems.Count} characters available"
-                : $"{visible} of {browserItems.Count} characters";
+            bool hasActiveFilter = !string.IsNullOrEmpty(filter) || filterHasAssets || filterFull;
+            browserCount.text = hasActiveFilter
+                ? $"{visible} of {browserItems.Count} characters"
+                : $"{browserItems.Count} characters available";
         }
 
         void UpdateBrowserCount()
@@ -151,6 +195,29 @@ namespace NikkeViewerEX.UI
             int active = settingsManager.NikkeSettings.NikkeList.Count;
             browserCount.text = $"{browserItems.Count} characters available, {active} active";
             tabActiveBtn.text = $"Active ({active})";
+        }
+
+        void UpdateBrowserAddedCount(string characterId)
+        {
+            foreach (var (element, entry) in browserItems)
+            {
+                if (entry.id == characterId)
+                {
+                    Button addBtn = element.Q<Button>("add-button");
+                    int count = 0;
+                    foreach (var n in settingsManager.NikkeSettings.NikkeList)
+                        if (n.AssetName == characterId) count++;
+                    if (count > 0)
+                    {
+                        addBtn.text = $"Added ({count})";
+                    }
+                    else
+                    {
+                        addBtn.text = "Add";
+                    }
+                    break;
+                }
+            }
         }
     }
 }

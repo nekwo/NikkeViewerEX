@@ -25,6 +25,7 @@
                 <Button class="tab-button" name="tab-debug" text="Debug" />
                 <Button class="tab-button" name="tab-presets" text="Presets" />
                 <Button class="tab-button" name="tab-backgrounds" text="Backgrounds" />
+                <Button class="tab-button" name="tab-music" text="Music" />
             </VisualElement>
 
             <!-- Content Area -->
@@ -76,6 +77,16 @@
                             </VisualElement>
                         </VisualElement>
 
+                        <!-- Background Music -->
+                        <VisualElement class="field-group">
+                            <Label class="field-label" text="Background Music (Optional)" />
+                            <VisualElement class="field-row">
+                                <TextField class="field-input" name="bgm-path-input"
+                                    placeholder="Path to audio file..." />
+                                <Button class="browse-button" name="browse-bgm" text="Browse" />
+                            </VisualElement>
+                        </VisualElement>
+
                         <!-- Load Button -->
                         <Button class="load-button" name="load-button" text="Load Database" />
 
@@ -90,6 +101,13 @@
                     <VisualElement class="search-bar">
                         <TextField class="search-input" name="search-input"
                             placeholder="Search characters by name or ID..." />
+                    </VisualElement>
+
+                    <!-- Filters -->
+                    <VisualElement class="filter-bar">
+                        <Label class="filter-label" text="Filters" />
+                        <Button class="filter-button" name="filter-has-assets" text="Has Assets" />
+                        <Button class="filter-button" name="filter-full" text="Full Characters" />
                     </VisualElement>
 
                     <!-- List header -->
@@ -137,6 +155,16 @@
                         </VisualElement>
                     </VisualElement>
 
+                    <!-- Music Controls -->
+                    <VisualElement class="active-music-section">
+                        <Label class="active-music-icon">\u266B</Label>
+                        <Label class="active-music-name" name="active-music-name" text="No track selected" />
+                        <Button class="active-music-playpause" name="active-music-playpause" text="Play" />
+                        <Slider class="active-music-volume" name="active-music-volume"
+                            low-value="0" high-value="1" value="0.5" />
+                        <Label class="active-music-volume-value" name="active-music-volume-value" text="50%" />
+                    </VisualElement>
+
                     <!-- List header -->
                     <VisualElement class="list-header">
                         <Label class="list-count" name="active-count" text="0 characters active" />
@@ -174,6 +202,19 @@
                     <VisualElement class="empty-state" name="bg-empty">
                         <Label class="empty-state-text"
                             text="No backgrounds found.&#10;Set a Backgrounds Folder in Configuration." />
+                    </VisualElement>
+                </VisualElement>
+
+                <!-- Tab 6: Music -->
+                <VisualElement class="tab-content" name="content-music">
+                    <VisualElement class="list-header">
+                        <Label class="list-count" name="music-count" text="0 tracks" />
+                        <Button class="bg-clear-button" name="music-clear-button" text="Clear" />
+                    </VisualElement>
+                    <ScrollView class="character-list" name="music-list" />
+                    <VisualElement class="empty-state" name="music-empty">
+                        <Label class="empty-state-text"
+                            text="No music found.&#10;Set a BGM Folder in Configuration." />
                     </VisualElement>
                 </VisualElement>
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Cysharp.Threading.Tasks;
 using Spine;
@@ -134,7 +135,21 @@ namespace NikkeViewerEX.Utils
                         skeletonAnimation.Skeleton.SetSkin(skin.Name);
                 }
                 skeletonAnimation.Skeleton.SetSlotsToSetupPose();
-                skeletonAnimation.AnimationState.SetAnimation(0, defaultAnimation, loop);
+
+                // Try the requested default animation; fall back to the first available one
+                Spine.Animation anim = skeletonData.FindAnimation(defaultAnimation);
+                if (anim == null)
+                {
+                    string available = string.Join(", ", skeletonData.Animations.Items
+                        .Take(skeletonData.Animations.Count)
+                        .Select(a => $"\"{a.Name}\""));
+                    Debug.LogWarning($"[SpineHelper] Animation \"{defaultAnimation}\" not found in {skelPath}. Available: [{available}]");
+                    if (skeletonData.Animations.Count > 0)
+                        anim = skeletonData.Animations.Items[0];
+                }
+                if (anim != null)
+                    skeletonAnimation.AnimationState.SetAnimation(0, anim, loop);
+
                 skeletonAnimation.Update(0);
                 skeletonAnimation.LateUpdate();
 

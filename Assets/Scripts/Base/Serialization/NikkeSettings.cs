@@ -5,6 +5,30 @@ using UnityEngine;
 namespace NikkeViewerEX.Serialization
 {
     [Serializable]
+    public enum NikkePoseType
+    {
+        Base,
+        Cover,
+        Aim
+    }
+
+    [Serializable]
+    public class NikkePose
+    {
+        public NikkePoseType PoseType;
+        public string SkelPath;
+        public string AtlasPath;
+        public List<string> TexturesPath = new();
+    }
+
+    [Serializable]
+    public class NikkePreset
+    {
+        public string Name;
+        public List<Nikke> NikkeList = new();
+    }
+
+    [Serializable]
     public class NikkeSettings
     {
         public bool IsFirstTime = true;
@@ -12,10 +36,18 @@ namespace NikkeViewerEX.Serialization
         public bool HideUI;
         public string FPS = "60";
         public string BackgroundImage;
+        public float BackgroundScale = 1f;
+        public float BackgroundPanX = 0f;
+        public float BackgroundPanY = 0f;
         public string BackgroundMusic;
         public float BackgroundMusicVolume = 0.5f;
         public bool BackgroundMusicPlaying = true;
+        public string DatabaseJsonPath;
+        public string AssetsFolder;
+        public string ThumbnailsFolder;
+        public string BackgroundsFolder;
         public List<Nikke> NikkeList = new();
+        public List<NikkePreset> Presets = new();
     }
 
     [Serializable]
@@ -32,5 +64,8 @@ namespace NikkeViewerEX.Serialization
         public Vector3 Scale = Vector3.one;
         public Vector2 Position;
         public bool Lock;
+        public bool HideName = true;
+        public List<NikkePose> Poses = new();
+        public NikkePoseType ActivePose = NikkePoseType.Base;
     }
 }

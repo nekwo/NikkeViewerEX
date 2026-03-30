@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Cysharp.Threading.Tasks;
 using NikkeViewerEX.Core;
 using NikkeViewerEX.Serialization;
@@ -20,6 +21,7 @@ namespace NikkeViewerEX.Components
         /// <returns></returns>
         public Nikke NikkeData = new();
         public string[] Skins { get; set; }
+        public static NikkeViewerBase Possessed { get; set; }
 
         public delegate void OnSkinChangedHandler(int index);
         public event OnSkinChangedHandler OnSkinChanged;
@@ -57,7 +59,14 @@ namespace NikkeViewerEX.Components
         public List<AudioClip> TouchVoices { get; set; } = new();
 
         /// <summary>
-        /// Current touch voice index that has been/being played from TouchVoices list.
+        /// Touch animations discovered from the skeleton (all animations matching the touch prefix).
+        /// Populated at spawn time. Cycled in lockstep with TouchVoices.
+        /// </summary>
+        public List<string> TouchAnimations { get; set; } = new();
+
+        /// <summary>
+        /// Shared touch index, advanced once per interaction.
+        /// Used modulo TouchVoices.Count and TouchAnimations.Count independently.
         /// </summary>
         public int TouchVoiceIndex = 0;
 
@@ -93,9 +102,10 @@ namespace NikkeViewerEX.Components
         }
 
 
-        public void ToggleDisplayName(bool state)
+        public void ToggleDisplayName(bool hideUI)
         {
-            NikkeNameText.gameObject.SetActive(!state);
+            if (NikkeNameText != null)
+                NikkeNameText.gameObject.SetActive(!NikkeData.HideName);
         }
 
         /// <summary>
@@ -105,13 +115,48 @@ namespace NikkeViewerEX.Components
         public void InvokeChangeSkin(int index) => OnSkinChanged?.Invoke(index);
 
         /// <summary>
-        /// Add MeshCollider component to Nikke.
+        /// Immediately trigger Spine loading without waiting for an event.
+        /// Called by NikkeBrowserPanel after setting NikkeData directly.
         /// </summary>
-        public void AddMeshCollider()
+        public virtual void TriggerSpawn() { }
+
+        /// <summary>
+        /// Create the floating name text if it doesn't exist yet, then show/hide it.
+        /// Called lazily the first time the user enables the name display.
+        /// </summary>
+        public virtual void EnsureNameText() { }
+
+        /// <summary>
+        /// Switch the visible pose. Only one pose is active at a time.
+        /// </summary>
+        public virtual void SetActivePose(Serialization.NikkePoseType poseType) { }
+
+        /// <summary>
+        /// Debug information for a single pose's skeleton.
+        /// </summary>
+        public struct PoseDebugInfo
         {
-            MeshCollider meshCollider =
-                gameObject.AddComponent(typeof(MeshCollider)) as MeshCollider;
-            if (TryGetComponent(out MeshFilter meshFilter))
+            public NikkePoseType PoseType;
+            public bool IsActive;
+            public string[] Animations;
+            public string CurrentAnimation;
+            public string[] SkinNames;
+            public string CurrentSkin;
+        }
+
+        /// <summary>
+        /// Returns debug information for all loaded poses. Override in subclasses.
+        /// </summary>
+        public virtual List<PoseDebugInfo> GetPoseDebugInfo() => new();
+
+        /// <summary>
+        /// Add MeshCollider component to the specified target (or this GameObject).
+        /// </summary>
+        public void AddMeshCollider(GameObject target = null)
+        {
+            target ??= gameObject;
+            MeshCollider meshCollider = target.AddComponent<MeshCollider>();
+            if (target.TryGetComponent(out MeshFilter meshFilter))
                 meshCollider.sharedMesh = meshFilter.sharedMesh;
         }
 
@@ -128,8 +173,9 @@ namespace NikkeViewerEX.Components
                 Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
                 if (Physics.Raycast(ray, out RaycastHit hit))
                 {
-                    if (hit.collider.TryGetComponent(out NikkeViewerBase viewer) && viewer == this)
-                        await DragUpdate(hit.collider.gameObject);
+                    var viewer = hit.collider.GetComponentInParent<NikkeViewerBase>();
+                    if (viewer != null && viewer == this)
+                        await DragUpdate(viewer.gameObject);
                 }
             }
         }
@@ -193,19 +239,20 @@ namespace NikkeViewerEX.Components
                 Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
                 if (Physics.Raycast(ray, out RaycastHit hit))
                 {
-                    if (hit.collider.TryGetComponent(out NikkeViewerBase viewer))
+                    var viewer = hit.collider.GetComponentInParent<NikkeViewerBase>();
+                    if (viewer != null)
                     {
                         float scrollDelta = Mouse.current.scroll.ReadValue().y;
                         if (scrollDelta != 0 && !viewer.NikkeData.Lock)
                         {
                             Vector3 newScale = spineHelper.ClampVector3(
-                                hit.transform.localScale
+                                viewer.transform.localScale
                                     + _scrollSensitivity * scrollDelta * Vector3.one,
                                 _nikkeMinScale,
                                 _nikkeMaxScale
                             );
-                            hit.transform.localScale = Vector3.Lerp(
-                                hit.transform.localScale,
+                            viewer.transform.localScale = Vector3.Lerp(
+                                viewer.transform.localScale,
                                 newScale,
                                 0.5f
                             );

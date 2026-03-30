@@ -167,7 +167,11 @@ namespace NikkeViewerEX.Core
         private async UniTask LoadBackgroundSettings()
         {
             BackgroundImageInput.text = NikkeSettings.BackgroundImage;
-            // BackgroundImage.sprite = await LoadSprite(NikkeSettings.BackgroundImage);
+            BackgroundImage.transform.localScale = Vector3.one * NikkeSettings.BackgroundScale;
+            BackgroundImage.rectTransform.anchoredPosition = new Vector2(NikkeSettings.BackgroundPanX, NikkeSettings.BackgroundPanY);
+            BackgroundImage.sprite = !string.IsNullOrEmpty(NikkeSettings.BackgroundImage)
+                ? await LoadSprite(NikkeSettings.BackgroundImage)
+                : null;
 
             BackgroundMusicInput.text = NikkeSettings.BackgroundMusic;
             BackgroundMusicAudio.clip = !string.IsNullOrEmpty(NikkeSettings.BackgroundMusic)
@@ -198,6 +202,8 @@ namespace NikkeViewerEX.Core
                 ? await LoadSprite(BackgroundImageInput.text)
                 : null;
             NikkeSettings.BackgroundImage = BackgroundImageInput.text;
+            BackgroundImage.transform.localScale = Vector3.one * NikkeSettings.BackgroundScale;
+            BackgroundImage.rectTransform.anchoredPosition = new Vector2(NikkeSettings.BackgroundPanX, NikkeSettings.BackgroundPanY);
 
             // Set background music
             if (

@@ -124,14 +124,16 @@ namespace NikkeViewerEX.Core
 
             PanelNotificationCenter.OnActiveTabChanged -=
                 PanelNotificationCenter_OnActiveTabChanged;
-            NonNativeKeyboard.Instance.OnTextSubmitted -= OnScreenKeyboard_OnTextSubmitted;
-            Array.ForEach(
-                _inputFields,
-                inputField =>
-                    inputField.onSelect.RemoveListener(_ =>
-                        ShowOnScreenKeyboard(inputField.text, inputField.gameObject)
-                    )
-            );
+            if (NonNativeKeyboard.Instance != null)
+                NonNativeKeyboard.Instance.OnTextSubmitted -= OnScreenKeyboard_OnTextSubmitted;
+            if (_inputFields != null)
+                Array.ForEach(
+                    _inputFields,
+                    inputField =>
+                        inputField.onSelect.RemoveListener(_ =>
+                            ShowOnScreenKeyboard(inputField.text, inputField.gameObject)
+                        )
+                );
         }
         #endregion
 

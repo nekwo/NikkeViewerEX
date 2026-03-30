@@ -59,6 +59,8 @@ MonoBehaviour:
     Lock: 0
   TouchVoiceIndex: 0
   m_DefaultAnimation: idle
+  m_CoverDefaultAnimation: cover_idle
+  m_AimDefaultAnimation: aim_idle
   m_TouchAnimation: action
   m_NikkeNamePrefab: {fileID: 4028676652664674605, guid: 4bcb2559d90830649aaebd933d51f65f, type: 3}
 --- !u!82 &9054592498538672509

@@ -12,6 +12,8 @@ namespace NikkeViewerEX.Core
         public InputAction PointerClick { get; private set; }
         public InputAction PointerHold { get; private set; }
         public InputAction PointerPosition { get; private set; }
+        public InputAction MiddleClick { get; private set; }
+        public InputAction RightClick { get; private set; }
 
         public InputAction ToggleUI { get; private set; }
 
@@ -22,6 +24,8 @@ namespace NikkeViewerEX.Core
         {
             PointerClick = inputSettings.FindActionMap("Nikke").FindAction("PointerClick");
             PointerHold = inputSettings.FindActionMap("Nikke").FindAction("PointerHold");
+            MiddleClick = inputSettings.FindActionMap("Nikke").FindAction("MiddleClick");
+            RightClick = inputSettings.FindActionMap("Nikke").FindAction("RightClick");
             ToggleUI = inputSettings.FindActionMap("UI").FindAction("ToggleUI");
         }
 

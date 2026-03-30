@@ -44,6 +44,51 @@
     flex-grow: 1;
 }
 
+.hover-zone {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background-color: rgba(0, 0, 0, 0);
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.hover-zone:hover {
+    opacity: 1;
+}
+
+.hover-zone .hide-ui-toggle {
+    flex-direction: row-reverse;
+    align-items: center;
+}
+
+.hover-zone .hide-ui-toggle .unity-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-right: 6px;
+}
+
+.hover-zone .hide-ui-toggle .unity-toggle__checkmark {
+    background-color: var(--bg-input);
+    border-color: var(--border-subtle);
+    border-width: 1px;
+    border-radius: var(--radius-sm);
+    width: 14px;
+    height: 14px;
+}
+
+.hover-zone .hide-ui-toggle:checked .unity-toggle__checkmark {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
 .browser-panel {
     position: absolute;
     left: 40px;

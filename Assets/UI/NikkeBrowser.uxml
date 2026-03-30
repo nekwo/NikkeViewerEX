@@ -2,6 +2,11 @@
     <Style src="NikkeBrowser.uss" />
 
     <VisualElement class="browser-root" name="browser-root">
+        <!-- Hover zone at top of screen -->
+        <VisualElement class="hover-zone" name="hover-zone">
+            <Toggle class="hide-ui-toggle" name="hide-ui-toggle" text="Hide UI" />
+        </VisualElement>
+        
         <VisualElement class="browser-panel" name="browser-panel">
 
             <!-- Header -->

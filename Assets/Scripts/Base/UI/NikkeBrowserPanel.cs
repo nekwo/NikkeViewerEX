@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using NikkeViewerEX.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -19,6 +20,12 @@ namespace NikkeViewerEX.UI
         // UI root references
         VisualElement root;
         VisualElement panel;
+        VisualElement hoverZone;
+        Toggle hideUiToggle;
+
+        // Hover-based UI state
+        bool isHoverModeEnabled;
+        bool isUiVisible = true;
 
         // Drag state
         bool dragging;
@@ -54,8 +61,8 @@ namespace NikkeViewerEX.UI
             root = doc.rootVisualElement;
             QueryElements();
             BindEvents();
-            RebuildActiveViewers();
             RestoreConfig();
+            RebuildActiveViewers();
         }
 
         void OnDisable()
@@ -74,6 +81,8 @@ namespace NikkeViewerEX.UI
         void QueryElements()
         {
             panel = root.Q("browser-panel");
+            hoverZone = root.Q("hover-zone");
+            hideUiToggle = root.Q<Toggle>("hide-ui-toggle");
 
             tabConfigBtn = root.Q<Button>("tab-config");
             tabBrowserBtn = root.Q<Button>("tab-browser");
@@ -107,6 +116,12 @@ namespace NikkeViewerEX.UI
             header.RegisterCallback<PointerMoveEvent>(OnHeaderPointerMove);
             header.RegisterCallback<PointerUpEvent>(OnHeaderPointerUp);
 
+            hoverZone.RegisterCallback<PointerEnterEvent>(OnHoverZoneEnter);
+            hoverZone.RegisterCallback<PointerDownEvent>(OnHoverZoneClick);
+            panel.RegisterCallback<PointerLeaveEvent>(OnPanelPointerLeave);
+
+            hideUiToggle.RegisterValueChangedCallback(OnHideUiToggleChanged);
+
             tabConfigBtn.clicked += () => SwitchTab(0);
             tabBrowserBtn.clicked += () => SwitchTab(1);
             tabActiveBtn.clicked += () => SwitchTab(2);
@@ -128,7 +143,52 @@ namespace NikkeViewerEX.UI
             header.UnregisterCallback<PointerMoveEvent>(OnHeaderPointerMove);
             header.UnregisterCallback<PointerUpEvent>(OnHeaderPointerUp);
 
+            hoverZone.UnregisterCallback<PointerEnterEvent>(OnHoverZoneEnter);
+            hoverZone.UnregisterCallback<PointerDownEvent>(OnHoverZoneClick);
+            panel.UnregisterCallback<PointerLeaveEvent>(OnPanelPointerLeave);
+            hideUiToggle.UnregisterValueChangedCallback(OnHideUiToggleChanged);
+
             UnbindBrowserEvents();
+        }
+
+        void OnHoverZoneEnter(PointerEnterEvent evt)
+        {
+            hoverZone.style.opacity = 1;
+        }
+
+        void OnPanelPointerLeave(PointerLeaveEvent evt)
+        {
+            if (isHoverModeEnabled)
+            {
+                Hide();
+                hoverZone.style.opacity = 0;
+            }
+        }
+
+        void OnHoverZoneClick(PointerDownEvent evt)
+        {
+            if (evt.button == 0)
+            {
+                TogglePanel();
+                hoverZone.style.opacity = isUiVisible ? 1f : 0f;
+            }
+        }
+
+        void OnHideUiToggleChanged(ChangeEvent<bool> evt)
+        {
+            isHoverModeEnabled = evt.newValue;
+            settingsManager.NikkeSettings.HideUI = evt.newValue;
+            settingsManager.SaveSettings().Forget();
+            if (isHoverModeEnabled)
+            {
+                Hide();
+                hoverZone.style.opacity = 0;
+            }
+            else
+            {
+                Show();
+                hoverZone.style.opacity = 1;
+            }
         }
 
         void OnHeaderPointerDown(PointerDownEvent evt)
@@ -212,14 +272,23 @@ namespace NikkeViewerEX.UI
         #region Public API
         public void TogglePanel()
         {
-            root.style.display =
-                root.style.display == DisplayStyle.None
-                    ? DisplayStyle.Flex
-                    : DisplayStyle.None;
+            if (isUiVisible)
+                Hide();
+            else
+                Show();
         }
 
-        public void Show() => root.style.display = DisplayStyle.Flex;
-        public void Hide() => root.style.display = DisplayStyle.None;
+        public void Show()
+        {
+            panel.style.display = DisplayStyle.Flex;
+            isUiVisible = true;
+        }
+
+        public void Hide()
+        {
+            panel.style.display = DisplayStyle.None;
+            isUiVisible = false;
+        }
         #endregion
     }
 }

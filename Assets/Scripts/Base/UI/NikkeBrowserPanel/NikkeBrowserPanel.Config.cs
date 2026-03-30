@@ -50,6 +50,19 @@ namespace NikkeViewerEX.UI
             if (!string.IsNullOrEmpty(settingsManager.NikkeSettings.BackgroundsFolder))
                 backgroundsFolderInput.value = settingsManager.NikkeSettings.BackgroundsFolder;
 
+            bool hideUI = settingsManager.NikkeSettings.HideUI;
+            isHoverModeEnabled = hideUI;
+            hideUiToggle.SetValueWithoutNotify(hideUI);
+            if (hideUI)
+            {
+                Hide();
+                hoverZone.style.opacity = 0;
+            }
+            else
+            {
+                hoverZone.style.opacity = 1;
+            }
+
             if (!string.IsNullOrEmpty(jsonPath) && !string.IsNullOrEmpty(assetsFolder))
                 LoadDatabase().Forget();
         }

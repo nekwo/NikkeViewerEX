@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -194,6 +195,12 @@ namespace NikkeViewerEX.Components
                 var active = ActiveSkeleton;
                 if (active != null)
                 {
+                    // If active pose is Aim, we need to set up aim blend on restart
+                    if (NikkeData.ActivePose == NikkePoseType.Aim)
+                        SetupAimBlend(active);
+                }
+                if (active != null)
+                {
                     Skins = active.Skeleton.Data.Skins?.Select(skin => skin.Name).ToArray();
                     TouchAnimations = active.Skeleton.Data.Animations.Items
                         .Take(active.Skeleton.Data.Animations.Count)
@@ -359,10 +366,7 @@ namespace NikkeViewerEX.Components
             // Jiggle physics
             var jiggleFile = JiggleSettingsManager.Load();
             if (jiggleFile.GlobalEnabled)
-            {
                 SetupJiggle(skel);
-                JiggleSettingsManager.Save();
-            }
         }
 
         void ClearAimBlend(SkeletonAnimation skel)
@@ -389,7 +393,8 @@ namespace NikkeViewerEX.Components
 
         void SetupJiggle(SkeletonAnimation skel)
         {
-            var charSettings = JiggleSettingsManager.GetForCharacter(NikkeData.AssetName);
+            string characterFolder = Path.Combine(SettingsManager.NikkeSettings.AssetsFolder, NikkeData.AssetName);
+            var charSettings = JiggleSettingsManager.GetForCharacter(characterFolder);
             if (charSettings != null && !charSettings.Enabled) return;
 
             var patterns = JiggleSettingsManager.GetPatterns(charSettings);
@@ -408,9 +413,9 @@ namespace NikkeViewerEX.Components
                     if (name.IndexOf("shadow", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
                     if (name == "@a_hair_") continue;
                     if (name.IndexOf("hair_0", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
-                    if (name.IndexOf("hair_1", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
-                    if (name.IndexOf("hair_2", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
-                    if (name.IndexOf("hair_3", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    //if (name.IndexOf("hair_1", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    //if (name.IndexOf("hair_2", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    //if (name.IndexOf("hair_3", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
                     if (name.IndexOf("acc_1", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
                     if (registeredNames.Contains(name)) continue;
                     if (name.IndexOf(pattern.Keyword, System.StringComparison.OrdinalIgnoreCase) < 0) continue;
@@ -459,11 +464,14 @@ namespace NikkeViewerEX.Components
                     SetY = v => bone.Y = v,
                 });
             }
+            sb.AppendLine($"Total: {registered} bones registered");
+            Debug.Log(sb);
 
             if (registered > 0)
             {
                 Vector2 mousePos = Mouse.current.position.ReadValue();
                 jigglePhysics.SetInitialMouse(new Vector2(mousePos.x / Screen.width, mousePos.y / Screen.height));
+                Debug.Log($"[AimStart] jigglePhysics CREATED for {NikkeData.AssetName}");
             }
         }
 
@@ -607,7 +615,7 @@ namespace NikkeViewerEX.Components
                 waitFrames++;
             }
             if (triggerId == currentTriggerId)
-                jigglePhysics?.TriggerImpulse(2f, 2f);
+                jigglePhysics?.TriggerImpulse(1f, 1f);
         }
 
         void AimEnd(InputAction.CallbackContext ctx)

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using NikkeViewerEX.Core;
 using NikkeViewerEX.Serialization;
+using NikkeViewerEX.UI;
 using NikkeViewerEX.Utils;
 using Spine.Unity;
 using TMPro;
@@ -57,6 +59,7 @@ namespace NikkeViewerEX.Components
         Spine.TrackEntry aimYTrack;
         JigglePhysics jigglePhysics;
         int currentTriggerId;
+        RectTransform aimReticle;
 
         string GetDefaultAnimation(NikkePoseType poseType) => poseType switch
         {
@@ -193,6 +196,12 @@ namespace NikkeViewerEX.Components
                 var active = ActiveSkeleton;
                 if (active != null)
                 {
+                    // If active pose is Aim, we need to set up aim blend on restart
+                    if (NikkeData.ActivePose == NikkePoseType.Aim)
+                        SetupAimBlend(active);
+                }
+                if (active != null)
+                {
                     Skins = active.Skeleton.Data.Skins?.Select(skin => skin.Name).ToArray();
                     TouchAnimations = active.Skeleton.Data.Animations.Items
                         .Take(active.Skeleton.Data.Animations.Count)
@@ -311,6 +320,12 @@ namespace NikkeViewerEX.Components
 
             aimBlendActive = true;
 
+            var reticleGO = new GameObject("AimReticle", typeof(RectTransform));
+            aimReticle = reticleGO.GetComponent<RectTransform>();
+            aimReticle.SetParent(SettingsManager.BackgroundImage.transform.parent, false);
+            aimReticle.SetAsLastSibling();
+            reticleGO.AddComponent<AimReticle>();
+
             // Track 0: base idle (MixBlend.Replace by default)
             // adds the additive first with out mixblend.add to esure it doesn't explode
             // Track 1+: additive animations (MixBlend.Add adds on top of track 0's result)
@@ -352,10 +367,7 @@ namespace NikkeViewerEX.Components
             // Jiggle physics
             var jiggleFile = JiggleSettingsManager.Load();
             if (jiggleFile.GlobalEnabled)
-            {
                 SetupJiggle(skel);
-                JiggleSettingsManager.Save();
-            }
         }
 
         void ClearAimBlend(SkeletonAnimation skel)
@@ -372,11 +384,18 @@ namespace NikkeViewerEX.Components
                 jigglePhysics.Clear();
                 jigglePhysics = null;
             }
+
+            if (aimReticle != null)
+            {
+                Destroy(aimReticle.gameObject);
+                aimReticle = null;
+            }
         }
 
         void SetupJiggle(SkeletonAnimation skel)
         {
-            var charSettings = JiggleSettingsManager.GetForCharacter(NikkeData.AssetName);
+            string characterFolder = Path.Combine(SettingsManager.NikkeSettings.AssetsFolder, NikkeData.AssetName);
+            var charSettings = JiggleSettingsManager.GetForCharacter(characterFolder);
             if (charSettings != null && !charSettings.Enabled) return;
 
             var patterns = JiggleSettingsManager.GetPatterns(charSettings);
@@ -394,8 +413,9 @@ namespace NikkeViewerEX.Components
                     if (name.Contains("shadow", System.StringComparison.OrdinalIgnoreCase)) continue;
                     if (name == "@a_hair_") continue;
                     if (name.IndexOf("hair_0", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
-                    if (name.IndexOf("hair_1", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
-                    if (name.IndexOf("hair_2", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    //if (name.IndexOf("hair_1", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    //if (name.IndexOf("hair_2", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    //if (name.IndexOf("hair_3", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
                     if (name.IndexOf("acc_1", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
                     if (registeredNames.Contains(name)) continue;
                     if (name.IndexOf(pattern.Keyword, System.StringComparison.OrdinalIgnoreCase) < 0) continue;
@@ -475,6 +495,17 @@ namespace NikkeViewerEX.Components
             if (spine != null)
             {
                 spine.Rotation += aimAngleX * 50f;
+            }
+
+            {
+                var canvasRect = aimReticle.GetComponentInParent<Canvas>().GetComponent<RectTransform>();
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    canvasRect,
+                    mousePos,
+                    Camera.main,
+                    out Vector2 canvasPos
+                );
+                aimReticle.anchoredPosition = canvasPos;
             }
 
             jigglePhysics?.Update(new Vector2(normalizedX, normalizedY));

@@ -52,53 +52,57 @@ namespace NikkeViewerEX.Serialization
             new() { Keyword = "hip", Stiffness = 20f, Damping = 0.6f, ForceFactor = 9f, MaxRotDisplacement = 25f, PosStiffness = 65f, PosDamping = 0.1f, PosForceFactor = 3.5f, MaxPosDisplacement = 4f },
             new() { Keyword = "skirt", Stiffness = 25f, Damping = 2.5f, ForceFactor = 5f, MaxRotDisplacement = 8f, PosStiffness = 50f, PosDamping = 4f, PosForceFactor = 1.5f, MaxPosDisplacement = 1f },
         };
-        public List<JiggleCharacterSettings> Characters = new();
     }
 
     public static class JiggleSettingsManager
     {
-        const string FileName = "jiggle.json";
-        static string FilePath => Path.Combine(Application.dataPath, "..", FileName);
-        static JiggleSettingsFile cached;
+        const string GlobalFileName = "jiggle.json";
+        const string CharacterFileName = "physics.json";
+        static string GlobalFilePath => Path.Combine(Application.dataPath, "..", GlobalFileName);
+        static JiggleSettingsFile cachedGlobal;
+        static readonly Dictionary<string, JiggleCharacterSettings> characterCache = new();
 
         public static JiggleSettingsFile Load()
         {
-            if (cached != null) return cached;
+            if (cachedGlobal != null) return cachedGlobal;
             try
             {
-                string path = FilePath;
+                string path = GlobalFilePath;
                 if (File.Exists(path))
                 {
                     string json = File.ReadAllText(path);
-                    cached = JsonUtility.FromJson<JiggleSettingsFile>(json);
+                    cachedGlobal = JsonUtility.FromJson<JiggleSettingsFile>(json);
                 }
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[Jiggle] Failed to load {FileName}: {ex.Message}");
+                Debug.LogError($"[Jiggle] Failed to load {GlobalFileName}: {ex.Message}");
             }
-            cached ??= new JiggleSettingsFile();
-            return cached;
+            cachedGlobal ??= new JiggleSettingsFile();
+            return cachedGlobal;
         }
 
-        public static void Save()
+        public static JiggleCharacterSettings GetForCharacter(string characterFolder)
         {
+            if (characterCache.TryGetValue(characterFolder, out var cached))
+                return cached;
             try
             {
-                cached ??= new JiggleSettingsFile();
-                string json = JsonUtility.ToJson(cached, true);
-                File.WriteAllText(FilePath, json);
+                string path = Path.Combine(characterFolder, CharacterFileName);
+                if (File.Exists(path))
+                {
+                    string json = File.ReadAllText(path);
+                    var settings = JsonUtility.FromJson<JiggleCharacterSettings>(json);
+                    characterCache[characterFolder] = settings;
+                    return settings;
+                }
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[Jiggle] Failed to save {FileName}: {ex.Message}");
+                Debug.LogError($"[Jiggle] Failed to load {CharacterFileName} for {characterFolder}: {ex.Message}");
             }
-        }
-
-        public static JiggleCharacterSettings GetForCharacter(string assetName)
-        {
-            var file = Load();
-            return file.Characters.Find(c => c.AssetName == assetName);
+            characterCache[characterFolder] = null;
+            return null;
         }
 
         public static List<JigglePattern> GetPatterns(JiggleCharacterSettings character)

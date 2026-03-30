@@ -66,6 +66,17 @@
             "PosDamping": 2.0,
             "PosForceFactor": 1.0,
             "MaxPosDisplacement": 3.0
+        },
+        {
+            "Keyword": "hair",
+            "Stiffness": 18.0,
+            "Damping": 2.0,
+            "ForceFactor": 5.0,
+            "MaxRotDisplacement": 40.0,
+            "PosStiffness": 60.0,
+            "PosDamping": 2.0,
+            "PosForceFactor": 1.0,
+            "MaxPosDisplacement": 1.0
         }
     ],
     "Characters": [

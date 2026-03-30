@@ -80,6 +80,7 @@ assetsFolder/{character_id}/
 │   └── {id}_cover_00.skel/atlas/png → Cover pose
 └── aim/
     └── {id}_aim_00.skel/atlas/png   → Aim pose
+└── Sounds/                          → sounds named properly
 ```
 
 > [!NOTE]  

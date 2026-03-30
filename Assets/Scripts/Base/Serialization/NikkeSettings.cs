@@ -21,6 +21,7 @@ namespace NikkeViewerEX.Serialization
         public List<string> TexturesPath = new();
     }
 
+
     [Serializable]
     public class NikkePreset
     {

@@ -58,6 +58,8 @@ namespace NikkeViewerEX.Components
         bool aimBlendActive;
         Spine.TrackEntry aimXTrack;
         Spine.TrackEntry aimYTrack;
+        JigglePhysics jigglePhysics;
+        int currentTriggerId;
 
         string GetDefaultAnimation(NikkePoseType poseType) => poseType switch
         {
@@ -302,6 +304,12 @@ namespace NikkeViewerEX.Components
             var aimY = data.FindAnimation(m_AimYAnimation);
             if (aimX == null && aimY == null) return;
 
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"[{NikkeData.AssetName}] Bone Hierarchy:");
+            foreach (var bone in skel.Skeleton.Bones)
+                sb.AppendLine($"  {bone.Data.Name}");
+            Debug.Log(sb);
+
             aimBlendActive = true;
 
             var reticleGO = new GameObject("AimReticle", typeof(RectTransform));
@@ -347,7 +355,14 @@ namespace NikkeViewerEX.Components
                 aimYTrack.Alpha = 1f;
                 aimYTrack.TimeScale = 0;
             }
-            
+
+            // Jiggle physics
+            var jiggleFile = JiggleSettingsManager.Load();
+            if (jiggleFile.GlobalEnabled)
+            {
+                SetupJiggle(skel);
+                JiggleSettingsManager.Save();
+            }
         }
 
         void ClearAimBlend(SkeletonAnimation skel)
@@ -359,12 +374,97 @@ namespace NikkeViewerEX.Components
             aimXTrack = null;
             aimYTrack = null;
 
+            if (jigglePhysics != null)
+            {
+                jigglePhysics.Clear();
+                jigglePhysics = null;
+            }
+
             if (aimReticle != null)
             {
                 Destroy(aimReticle.gameObject);
                 aimReticle = null;
             }
+        }
 
+        void SetupJiggle(SkeletonAnimation skel)
+        {
+            var charSettings = JiggleSettingsManager.GetForCharacter(NikkeData.AssetName);
+            if (charSettings != null && !charSettings.Enabled) return;
+
+            var patterns = JiggleSettingsManager.GetPatterns(charSettings);
+            var explicitBones = charSettings?.Bones ?? new List<JiggleBoneSettings>();
+
+            // Auto-discover bones from keyword patterns
+            var discovered = new List<JiggleBoneSettings>();
+            var registeredNames = new HashSet<string>(explicitBones.ConvertAll(b => b.BoneName));
+
+            foreach (var pattern in patterns)
+            {
+                foreach (var bone in skel.Skeleton.Bones)
+                {
+                    string name = bone.Data.Name;
+                    if (name.Length == 0 || (name[0] != '@' && name[0] != '#')) continue;
+                    if (name.IndexOf("shadow", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (name == "@a_hair_") continue;
+                    if (name.IndexOf("hair_0", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (name.IndexOf("hair_1", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (name.IndexOf("hair_2", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (name.IndexOf("hair_3", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (name.IndexOf("acc_1", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (registeredNames.Contains(name)) continue;
+                    if (name.IndexOf(pattern.Keyword, System.StringComparison.OrdinalIgnoreCase) < 0) continue;
+                    registeredNames.Add(name);
+                    discovered.Add(new JiggleBoneSettings
+                    {
+                        BoneName = name,
+                        Stiffness = pattern.Stiffness,
+                        Damping = pattern.Damping,
+                        ForceFactor = pattern.ForceFactor,
+                        MaxRotDisplacement = pattern.MaxRotDisplacement,
+                        PosStiffness = pattern.PosStiffness,
+                        PosDamping = pattern.PosDamping,
+                        PosForceFactor = pattern.PosForceFactor,
+                        MaxPosDisplacement = pattern.MaxPosDisplacement,
+                    });
+                }
+            }
+
+            var allBones = new List<JiggleBoneSettings>(explicitBones);
+            allBones.AddRange(discovered);
+            if (allBones.Count == 0) return;
+
+            jigglePhysics = new JigglePhysics(allBones);
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"[Jiggle] {NikkeData.NikkeName} — registering bones:");
+            int registered = 0;
+
+            foreach (var bs in allBones)
+            {
+                var bone = skel.Skeleton.FindBone(bs.BoneName);
+                if (bone == null)
+                {
+                    sb.AppendLine($"  MISSING: {bs.BoneName}");
+                    continue;
+                }
+                sb.AppendLine($"  OK: {bs.BoneName} (stiff={bs.Stiffness} damp={bs.Damping} force={bs.ForceFactor})");
+                registered++;
+                jigglePhysics.AddBone(bs.BoneName, new JigglePhysics.BoneHandle
+                {
+                    GetRotation = () => bone.Rotation,
+                    SetRotation = v => bone.Rotation = v,
+                    GetX = () => bone.X,
+                    GetY = () => bone.Y,
+                    SetX = v => bone.X = v,
+                    SetY = v => bone.Y = v,
+                });
+            }
+
+            if (registered > 0)
+            {
+                Vector2 mousePos = Mouse.current.position.ReadValue();
+                jigglePhysics.SetInitialMouse(new Vector2(mousePos.x / Screen.width, mousePos.y / Screen.height));
+            }
         }
 
         void UpdateAimBlend()
@@ -379,8 +479,6 @@ namespace NikkeViewerEX.Components
                 aimXTrack.TrackTime = aimXTrack.Animation.Duration * normalizedX;
             if (aimYTrack != null)
                 aimYTrack.TrackTime = aimYTrack.Animation.Duration * normalizedY;
-
-            if (aimReticle != null)
             {
                 var canvasRect = aimReticle.GetComponentInParent<Canvas>().GetComponent<RectTransform>();
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(
@@ -392,17 +490,7 @@ namespace NikkeViewerEX.Components
                 aimReticle.anchoredPosition = canvasPos;
             }
 
-            // float aimAngleX = (normalizedX - 0.5f) * 2f;
-            // var spine = inst.anim.Skeleton.FindBone("spine");
-            // if (spine != null)
-            // {
-            //     spine.Rotation += aimAngleX * 10f;
-            // }
-            // else
-            // {
-            //     foreach (var bone in inst.anim.Skeleton.Data.Bones)
-            //         Debug.Log($"Bone: {bone.Name}");
-            // }
+            jigglePhysics?.Update(new Vector2(normalizedX, normalizedY));
         }
 
         public override List<PoseDebugInfo> GetPoseDebugInfo()
@@ -503,13 +591,32 @@ namespace NikkeViewerEX.Components
         void AimStart(InputAction.CallbackContext ctx)
         {
             if (Possessed == this)
+            {
+                int triggerId = ++currentTriggerId;
                 SetActivePose(NikkePoseType.Aim);
+                TriggerJiggleImpulse(triggerId).Forget();
+            }
+        }
+
+        async UniTaskVoid TriggerJiggleImpulse(int triggerId)
+        {
+            int waitFrames = 0;
+            while (jigglePhysics == null && waitFrames < 30)
+            {
+                await UniTask.NextFrame();
+                waitFrames++;
+            }
+            if (triggerId == currentTriggerId)
+                jigglePhysics?.TriggerImpulse(2f, 2f);
         }
 
         void AimEnd(InputAction.CallbackContext ctx)
         {
             if (Possessed == this)
+            {
+                currentTriggerId++;
                 SetActivePose(NikkePoseType.Cover);
+            }
         }
 
         void Interact(InputAction.CallbackContext ctx)
